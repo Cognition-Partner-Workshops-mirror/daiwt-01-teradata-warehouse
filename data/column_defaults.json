@@ -1,0 +1,198 @@
+{
+  "nvb_edw.dim_account": {
+    "batch_id": 20250630,
+    "load_ts": "2025-06-30 23:00:00",
+    "src_system_cd": "COREBANK",
+    "record_status_cd": "A",
+    "effective_date": "2024-01-01",
+    "expiry_date": "9999-12-31",
+    "currency_cd": "NOK",
+    "account_status_cd": "OPEN",
+    "accrual_basis_cd": "ACT365",
+    "overdraft_limit": 0
+  },
+  "nvb_edw.dim_branch": {
+    "batch_id": 20250630,
+    "load_ts": "2025-06-30 23:00:00",
+    "src_system_cd": "COREBANK",
+    "record_status_cd": "A",
+    "effective_date": "2024-01-01",
+    "expiry_date": "9999-12-31",
+    "branch_name": "Nordvik Lokalbank",
+    "region_cd": "NORGE",
+    "branch_type_cd": "RETAIL",
+    "service_language_cd": "nb",
+    "branch_status_cd": "OPEN"
+  },
+  "nvb_edw.dim_calendar": {
+    "batch_id": 20250630,
+    "load_ts": "2025-06-30 23:00:00",
+    "src_system_cd": "COREBANK",
+    "record_status_cd": "A",
+    "effective_date": "2024-01-01",
+    "expiry_date": "9999-12-31",
+    "calendar_name": "NORWEGIAN_RETAIL",
+    "business_day_rule_cd": "ALL_DAYS"
+  },
+  "nvb_edw.dim_card": {
+    "batch_id": 20250630,
+    "load_ts": "2025-06-30 23:00:00",
+    "src_system_cd": "COREBANK",
+    "record_status_cd": "A",
+    "effective_date": "2024-01-01",
+    "expiry_date": "9999-12-31",
+    "network_cd": "BANKAXEPT",
+    "card_status_cd": "ACTIVE",
+    "card_expiry_date": "2028-01-31",
+    "contactless_ind": "Y",
+    "online_enabled_ind": "Y"
+  },
+  "nvb_edw.dim_customer": {
+    "batch_id": 20250630,
+    "load_ts": "2025-06-30 23:00:00",
+    "src_system_cd": "COREBANK",
+    "record_status_cd": "A",
+    "effective_date": "2024-01-01",
+    "expiry_date": "9999-12-31",
+    "customer_type_cd": "PERSONAL",
+    "residence_country_cd": "NO",
+    "preferred_language_cd": "nb",
+    "kyc_status_cd": "VERIFIED",
+    "consent_marketing_ind": "N"
+  },
+  "nvb_edw.dim_merchant": {
+    "batch_id": 20250630,
+    "load_ts": "2025-06-30 23:00:00",
+    "src_system_cd": "COREBANK",
+    "record_status_cd": "A",
+    "effective_date": "2024-01-01",
+    "expiry_date": "9999-12-31",
+    "country_cd": "NO",
+    "settlement_currency_cd": "NOK",
+    "acquirer_cd": "NVB",
+    "merchant_status_cd": "ACTIVE"
+  },
+  "nvb_edw.dim_product": {
+    "batch_id": 20250630,
+    "load_ts": "2025-06-30 23:00:00",
+    "src_system_cd": "COREBANK",
+    "record_status_cd": "A",
+    "effective_date": "2024-01-01",
+    "expiry_date": "9999-12-31",
+    "product_family_cd": "RETAIL",
+    "currency_cd": "NOK",
+    "product_status_cd": "LIVE",
+    "rate_basis_cd": "ACT365",
+    "minimum_balance": 0
+  },
+  "nvb_edw.etl_batch_control": {
+    "batch_id": 20250630,
+    "load_ts": "2025-06-30 23:00:00",
+    "src_system_cd": "COREBANK",
+    "record_status_cd": "A",
+    "effective_date": "2024-01-01",
+    "expiry_date": "9999-12-31",
+    "last_step_cd": "10_close_batch",
+    "window_start_date": "2024-01-01",
+    "window_end_date": "2025-06-30",
+    "reject_count": 0,
+    "scheduler_group_cd": "NVB_NIGHTLY"
+  },
+  "nvb_edw.fct_daily_balance": {
+    "batch_id": 20250630,
+    "load_ts": "2025-06-30 23:00:00",
+    "src_system_cd": "COREBANK",
+    "record_status_cd": "A",
+    "effective_date": "2024-01-01",
+    "expiry_date": "9999-12-31",
+    "balance_type_cd": "BOOK",
+    "currency_cd": "NOK",
+    "accrued_interest": 0,
+    "reserved_amount": 0
+  },
+  "nvb_edw.fct_loan": {
+    "batch_id": 20250630,
+    "load_ts": "2025-06-30 23:00:00",
+    "src_system_cd": "COREBANK",
+    "record_status_cd": "A",
+    "effective_date": "2024-01-01",
+    "expiry_date": "9999-12-31",
+    "loan_status_cd": "LIVE",
+    "currency_cd": "NOK",
+    "contractual_rate": 5.25,
+    "repayment_frequency_cd": "MONTHLY",
+    "collateral_type_cd": "PROPERTY"
+  },
+  "nvb_edw.fct_product_order": {
+    "batch_id": 20250630,
+    "load_ts": "2025-06-30 23:00:00",
+    "src_system_cd": "COREBANK",
+    "record_status_cd": "A",
+    "effective_date": "2024-01-01",
+    "expiry_date": "9999-12-31",
+    "application_channel_cd": "ONLINE",
+    "decision_system_cd": "RETAIL_RULES",
+    "currency_cd": "NOK",
+    "manual_review_ind": "N"
+  },
+  "nvb_edw.fct_transaction": {
+    "batch_id": 20250630,
+    "load_ts": "2025-06-30 23:00:00",
+    "src_system_cd": "COREBANK",
+    "record_status_cd": "A",
+    "effective_date": "2024-01-01",
+    "expiry_date": "9999-12-31",
+    "currency_cd": "NOK",
+    "posting_status_cd": "POSTED",
+    "reversal_ind": "N",
+    "clearing_scheme_cd": "DOMESTIC"
+  },
+  "nvb_mart.mart_branch_performance": {
+    "batch_id": 20250630,
+    "load_ts": "2025-06-30 23:00:00",
+    "src_system_cd": "COREBANK",
+    "record_status_cd": "A",
+    "effective_date": "2024-01-01",
+    "expiry_date": "9999-12-31"
+  },
+  "nvb_mart.mart_card_spend_category": {
+    "batch_id": 20250630,
+    "load_ts": "2025-06-30 23:00:00",
+    "src_system_cd": "COREBANK",
+    "record_status_cd": "A",
+    "effective_date": "2024-01-01",
+    "expiry_date": "9999-12-31"
+  },
+  "nvb_mart.mart_channel_daily": {
+    "batch_id": 20250630,
+    "load_ts": "2025-06-30 23:00:00",
+    "src_system_cd": "COREBANK",
+    "record_status_cd": "A",
+    "effective_date": "2024-01-01",
+    "expiry_date": "9999-12-31"
+  },
+  "nvb_mart.mart_customer_segment": {
+    "batch_id": 20250630,
+    "load_ts": "2025-06-30 23:00:00",
+    "src_system_cd": "COREBANK",
+    "record_status_cd": "A",
+    "effective_date": "2024-01-01",
+    "expiry_date": "9999-12-31"
+  },
+  "nvb_mart.mart_monthly_balance": {
+    "batch_id": 20250630,
+    "load_ts": "2025-06-30 23:00:00",
+    "src_system_cd": "COREBANK",
+    "record_status_cd": "A",
+    "effective_date": "2024-01-01",
+    "expiry_date": "9999-12-31"
+  },
+  "nvb_mart.mart_product_profitability": {
+    "batch_id": 20250630,
+    "load_ts": "2025-06-30 23:00:00",
+    "src_system_cd": "COREBANK",
+    "record_status_cd": "A",
+    "effective_date": "2024-01-01",
+    "expiry_date": "9999-12-31"
+  }
+}

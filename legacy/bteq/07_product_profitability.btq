@@ -1,0 +1,74 @@
+.LOGON ${TD_HOST}/${TD_USER},${TD_PASSWORD}
+.IF ERRORCODE <> 0 THEN .QUIT 12
+.SET ERROROUT STDOUT
+.SET WIDTH 254
+.SET TITLEDASHES OFF
+SET SESSION DATEFORM = ANSIDATE;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+SELECT batch_date, status, last_step_cd
+FROM nvb_edw.etl_batch_control
+WHERE batch_date = DATE '2025-06-30' AND job_name = 'NIGHTLY';
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.IF ACTIVITYCOUNT = 0 THEN .GOTO register_batch
+.GOTO batch_ready
+.LABEL register_batch
+INSERT INTO nvb_edw.etl_batch_control
+    (batch_date, job_name, status, row_count)
+VALUES (DATE '2025-06-30', 'NIGHTLY', 'OPEN', 0);
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.LABEL batch_ready
+UPDATE nvb_edw.etl_batch_control
+SET status = 'RUNNING', last_step_cd = '07_product_profitability'
+WHERE batch_date = DATE '2025-06-30' AND job_name = 'NIGHTLY';
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.IF ACTIVITYCOUNT <> 1 THEN .GOTO rejected
+
+CREATE VOLATILE TABLE vt_product_income AS
+(
+    SELECT a.product_id,
+           AVG(CAST(b.balance AS DECIMAL(28,6))) AS precise_balance,
+           MAX(p.annual_rate) AS annual_rate
+    FROM nvb_edw.fct_daily_balance AS b
+    JOIN nvb_edw.dim_account AS a ON b.account_id = a.account_id
+    JOIN nvb_edw.dim_product AS p ON a.product_id = p.product_id
+    WHERE b.record_status_cd = 'A' AND a.record_status_cd = 'A'
+      AND b.balance_date BETWEEN DATE '2024-01-01' AND DATE '2025-06-30'
+    GROUP BY 1
+) WITH DATA PRIMARY INDEX (product_id) ON COMMIT PRESERVE ROWS;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+SELECT TOP 1 product_id FROM vt_product_income
+WHERE annual_rate IS NULL OR annual_rate < 0 OR precise_balance IS NULL;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.IF ACTIVITYCOUNT > 0 THEN .GOTO rejected
+BT;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+DELETE FROM nvb_mart.mart_product_profitability WHERE batch_id = 20250630;
+.IF ERRORCODE <> 0 THEN .GOTO rollback_work
+INSERT INTO nvb_mart.mart_product_profitability
+    (product_id, average_balance, annual_income)
+SELECT product_id, CAST(precise_balance AS DECIMAL(18,2)),
+       CAST(precise_balance * annual_rate / 100 AS DECIMAL(18,2))
+FROM vt_product_income;
+.IF ERRORCODE <> 0 THEN .GOTO rollback_work
+ET;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+COLLECT STATISTICS COLUMN (product_id) ON nvb_mart.mart_product_profitability;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+SELECT product_id, average_balance, annual_income
+FROM nvb_mart.mart_product_profitability ORDER BY 1;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.LOGOFF
+.QUIT 0
+.LABEL rollback_work
+ABORT;
+.GOTO failed
+.LABEL rejected
+.REMARK 'Control failure: retain delivery and request log; do not publish.'
+.LABEL failed
+.EXPORT RESET
+UPDATE nvb_edw.etl_batch_control
+SET status = 'FAILED', last_step_cd = '07_product_profitability'
+WHERE batch_date = DATE '2025-06-30' AND job_name = 'NIGHTLY';
+.IF ERRORCODE <> 0 THEN .QUIT 99
+.LOGOFF
+.QUIT 12

@@ -1,0 +1,63 @@
+.LOGON ${TD_HOST}/${TD_USER},${TD_PASSWORD}
+.IF ERRORCODE <> 0 THEN .QUIT 12
+.SET ERROROUT STDOUT
+.SET WIDTH 254
+.SET TITLEDASHES OFF
+SET SESSION DATEFORM = ANSIDATE;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+SELECT batch_date, status, last_step_cd
+FROM nvb_edw.etl_batch_control
+WHERE batch_date = DATE '2025-06-30' AND job_name = 'NIGHTLY';
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.IF ACTIVITYCOUNT = 0 THEN .GOTO register_batch
+.GOTO batch_ready
+.LABEL register_batch
+INSERT INTO nvb_edw.etl_batch_control
+    (batch_date, job_name, status, row_count)
+VALUES (DATE '2025-06-30', 'NIGHTLY', 'OPEN', 0);
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.LABEL batch_ready
+UPDATE nvb_edw.etl_batch_control
+SET status = 'RUNNING', last_step_cd = '08_channel'
+WHERE batch_date = DATE '2025-06-30' AND job_name = 'NIGHTLY';
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.IF ACTIVITYCOUNT <> 1 THEN .GOTO rejected
+
+CREATE VOLATILE TABLE vt_channel_control AS
+(
+    SELECT txn_date, channel, COUNT(*) AS txn_count, SUM(amount) AS net_amount
+    FROM nvb_edw.fct_transaction
+    GROUP BY 1, 2
+) WITH DATA PRIMARY INDEX (txn_date) ON COMMIT PRESERVE ROWS;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+SELECT TOP 1 c.txn_date FROM vt_channel_control AS c
+LEFT JOIN nvb_edw.dim_calendar AS d ON c.txn_date = d.calendar_date
+WHERE d.calendar_date IS NULL;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.IF ACTIVITYCOUNT > 0 THEN .GOTO rejected
+EXEC nvb_edw.channel_daily(DATE '2024-01-01', DATE '2025-06-30');
+.IF ERRORCODE <> 0 THEN .GOTO failed
+SELECT TOP 1 w.txn_date FROM vt_channel_control AS w
+LEFT JOIN nvb_mart.mart_channel_daily AS m
+  ON w.txn_date = m.txn_date AND w.channel = m.channel
+WHERE m.txn_date IS NULL OR w.txn_count <> m.txn_count OR w.net_amount <> m.net_amount;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.IF ACTIVITYCOUNT > 0 THEN .GOTO rejected
+COLLECT STATISTICS COLUMN (txn_date, channel) ON nvb_mart.mart_channel_daily;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+SELECT channel, SUM(txn_count) AS payments, SUM(net_amount) AS net_amount,
+       SUM(net_amount) / NULLIFZERO(SUM(txn_count)) AS average_payment
+FROM nvb_mart.mart_channel_daily GROUP BY 1;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.LOGOFF
+.QUIT 0
+.LABEL rejected
+.REMARK 'Control failure: retain delivery and request log; do not publish.'
+.LABEL failed
+.EXPORT RESET
+UPDATE nvb_edw.etl_batch_control
+SET status = 'FAILED', last_step_cd = '08_channel'
+WHERE batch_date = DATE '2025-06-30' AND job_name = 'NIGHTLY';
+.IF ERRORCODE <> 0 THEN .QUIT 99
+.LOGOFF
+.QUIT 12

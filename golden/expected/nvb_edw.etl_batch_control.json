@@ -1,0 +1,65 @@
+{
+  "dates": {
+    "batch_date": {
+      "max": "2025-06-30",
+      "min": "2025-06-30"
+    },
+    "effective_date": {
+      "max": "2024-01-01",
+      "min": "2024-01-01"
+    },
+    "expiry_date": {
+      "max": "9999-12-31",
+      "min": "9999-12-31"
+    },
+    "load_ts": {
+      "max": "2025-06-30 23:00:00",
+      "min": "2025-06-30 23:00:00"
+    },
+    "window_end_date": {
+      "max": "2025-06-30",
+      "min": "2025-06-30"
+    },
+    "window_start_date": {
+      "max": "2024-01-01",
+      "min": "2024-01-01"
+    }
+  },
+  "distinct": {
+    "batch_id": 1
+  },
+  "input_rows": {
+    "nvb_edw.dim_account": 8000,
+    "nvb_edw.dim_branch": 8,
+    "nvb_edw.dim_calendar": 547,
+    "nvb_edw.dim_card": 6000,
+    "nvb_edw.dim_merchant": 80,
+    "nvb_edw.dim_product": 4,
+    "nvb_edw.fct_daily_balance": 4376000,
+    "nvb_edw.fct_loan": 1800,
+    "nvb_edw.fct_product_order": 3500,
+    "nvb_stg.customer_feed": 5100,
+    "nvb_stg.transaction_feed": 180000
+  },
+  "last_step_cd_counts": {
+    "10_close_batch": 1
+  },
+  "record_status_cd_counts": {
+    "A": 1
+  },
+  "rows": 1,
+  "scheduler_group_cd_counts": {
+    "NVB_NIGHTLY": 1
+  },
+  "src_system_cd_counts": {
+    "COREBANK": 1
+  },
+  "status_counts": {
+    "COMPLETE": 1
+  },
+  "sums": {
+    "reject_count": 0.0,
+    "row_count": 180000.0
+  },
+  "table": "nvb_edw.etl_batch_control"
+}

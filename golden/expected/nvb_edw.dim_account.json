@@ -1,0 +1,63 @@
+{
+  "account_status_cd_counts": {
+    "OPEN": 8000
+  },
+  "accrual_basis_cd_counts": {
+    "ACT365": 8000
+  },
+  "currency_cd_counts": {
+    "NOK": 8000
+  },
+  "dates": {
+    "effective_date": {
+      "max": "2024-01-01",
+      "min": "2024-01-01"
+    },
+    "expiry_date": {
+      "max": "9999-12-31",
+      "min": "9999-12-31"
+    },
+    "load_ts": {
+      "max": "2025-06-30 23:00:00",
+      "min": "2025-06-30 23:00:00"
+    },
+    "opened_date": {
+      "max": "2024-01-01",
+      "min": "2024-01-01"
+    }
+  },
+  "distinct": {
+    "account_id": 8000,
+    "batch_id": 1,
+    "customer_id": 5000,
+    "product_id": 4
+  },
+  "dormant_flag_counts": {
+    "N": 7895,
+    "Y": 105
+  },
+  "input_rows": {
+    "nvb_edw.dim_account": 8000,
+    "nvb_edw.dim_branch": 8,
+    "nvb_edw.dim_calendar": 547,
+    "nvb_edw.dim_card": 6000,
+    "nvb_edw.dim_merchant": 80,
+    "nvb_edw.dim_product": 4,
+    "nvb_edw.fct_daily_balance": 4376000,
+    "nvb_edw.fct_loan": 1800,
+    "nvb_edw.fct_product_order": 3500,
+    "nvb_stg.customer_feed": 5100,
+    "nvb_stg.transaction_feed": 180000
+  },
+  "record_status_cd_counts": {
+    "A": 8000
+  },
+  "rows": 8000,
+  "src_system_cd_counts": {
+    "COREBANK": 8000
+  },
+  "sums": {
+    "overdraft_limit": 0.0
+  },
+  "table": "nvb_edw.dim_account"
+}

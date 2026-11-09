@@ -1,0 +1,64 @@
+.LOGON ${TD_HOST}/${TD_USER},${TD_PASSWORD}
+.IF ERRORCODE <> 0 THEN .QUIT 12
+.SET ERROROUT STDOUT
+.SET WIDTH 254
+.SET TITLEDASHES OFF
+SET SESSION DATEFORM = ANSIDATE;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+SELECT batch_date, status, last_step_cd
+FROM nvb_edw.etl_batch_control
+WHERE batch_date = DATE '2025-06-30' AND job_name = 'NIGHTLY';
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.IF ACTIVITYCOUNT = 0 THEN .GOTO register_batch
+.GOTO batch_ready
+.LABEL register_batch
+INSERT INTO nvb_edw.etl_batch_control
+    (batch_date, job_name, status, row_count)
+VALUES (DATE '2025-06-30', 'NIGHTLY', 'OPEN', 0);
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.LABEL batch_ready
+UPDATE nvb_edw.etl_batch_control
+SET status = 'RUNNING', last_step_cd = '06_branch_league'
+WHERE batch_date = DATE '2025-06-30' AND job_name = 'NIGHTLY';
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.IF ACTIVITYCOUNT <> 1 THEN .GOTO rejected
+
+CREATE VOLATILE TABLE vt_branch_control AS
+(
+    SELECT branch_id, COUNT(*) AS customer_count
+    FROM nvb_edw.dim_customer GROUP BY 1
+) WITH DATA PRIMARY INDEX (branch_id) ON COMMIT PRESERVE ROWS;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+SELECT TOP 1 c.branch_id FROM vt_branch_control AS c
+LEFT JOIN nvb_edw.dim_branch AS b ON c.branch_id = b.branch_id
+WHERE b.branch_id IS NULL;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.IF ACTIVITYCOUNT > 0 THEN .GOTO rejected
+CALL nvb_edw.branch_league(DATE '2025-06-30');
+.IF ERRORCODE <> 0 THEN .GOTO failed
+SELECT TOP 1 c.branch_id
+FROM vt_branch_control AS c
+LEFT JOIN nvb_mart.mart_branch_performance AS m ON c.branch_id = m.branch_id
+WHERE m.branch_id IS NULL OR m.customer_count <> c.customer_count
+   OR m.league_rank < 1;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.IF ACTIVITYCOUNT > 0 THEN .GOTO rejected
+COLLECT STATISTICS COLUMN (league_rank) ON nvb_mart.mart_branch_performance;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+SELECT b.town, m.customer_count, m.net_amount, m.league_rank
+FROM nvb_mart.mart_branch_performance AS m
+JOIN nvb_edw.dim_branch AS b ON m.branch_id = b.branch_id
+ORDER BY m.league_rank;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.LOGOFF
+.QUIT 0
+.LABEL rejected
+.REMARK 'Control failure: retain delivery and request log; do not publish.'
+.LABEL failed
+.EXPORT RESET
+UPDATE nvb_edw.etl_batch_control
+SET status = 'FAILED', last_step_cd = '06_branch_league'
+WHERE batch_date = DATE '2025-06-30' AND job_name = 'NIGHTLY';
+.IF ERRORCODE <> 0 THEN .QUIT 99
+.LOGOFF
+.QUIT 12

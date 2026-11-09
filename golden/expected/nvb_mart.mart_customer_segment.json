@@ -1,0 +1,55 @@
+{
+  "dates": {
+    "effective_date": {
+      "max": "2024-01-01",
+      "min": "2024-01-01"
+    },
+    "expiry_date": {
+      "max": "9999-12-31",
+      "min": "9999-12-31"
+    },
+    "last_txn_date": {
+      "max": "2025-06-30",
+      "min": "2024-12-22"
+    },
+    "load_ts": {
+      "max": "2025-06-30 23:00:00",
+      "min": "2025-06-30 23:00:00"
+    }
+  },
+  "distinct": {
+    "batch_id": 1,
+    "customer_id": 5000
+  },
+  "input_rows": {
+    "nvb_edw.dim_account": 8000,
+    "nvb_edw.dim_branch": 8,
+    "nvb_edw.dim_calendar": 547,
+    "nvb_edw.dim_card": 6000,
+    "nvb_edw.dim_merchant": 80,
+    "nvb_edw.dim_product": 4,
+    "nvb_edw.fct_daily_balance": 4376000,
+    "nvb_edw.fct_loan": 1800,
+    "nvb_edw.fct_product_order": 3500,
+    "nvb_stg.customer_feed": 5100,
+    "nvb_stg.transaction_feed": 180000
+  },
+  "record_status_cd_counts": {
+    "A": 5000
+  },
+  "rows": 5000,
+  "segment_counts": {
+    "ACTIVE": 2327,
+    "DORMANT": 61,
+    "OCCASIONAL": 2391,
+    "PREMIUM": 221
+  },
+  "src_system_cd_counts": {
+    "COREBANK": 5000
+  },
+  "sums": {
+    "spend": 61969974.68,
+    "txn_count": 120089.0
+  },
+  "table": "nvb_mart.mart_customer_segment"
+}

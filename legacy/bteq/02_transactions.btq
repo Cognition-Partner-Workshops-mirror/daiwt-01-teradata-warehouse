@@ -1,0 +1,88 @@
+.LOGON ${TD_HOST}/${TD_USER},${TD_PASSWORD}
+.IF ERRORCODE <> 0 THEN .QUIT 12
+.SET ERROROUT STDOUT
+.SET WIDTH 254
+.SET TITLEDASHES OFF
+SET SESSION DATEFORM = ANSIDATE;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+SELECT batch_date, status, last_step_cd
+FROM nvb_edw.etl_batch_control
+WHERE batch_date = DATE '2025-06-30' AND job_name = 'NIGHTLY';
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.IF ACTIVITYCOUNT = 0 THEN .GOTO register_batch
+.GOTO batch_ready
+.LABEL register_batch
+INSERT INTO nvb_edw.etl_batch_control
+    (batch_date, job_name, status, row_count)
+VALUES (DATE '2025-06-30', 'NIGHTLY', 'OPEN', 0);
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.LABEL batch_ready
+UPDATE nvb_edw.etl_batch_control
+SET status = 'RUNNING', last_step_cd = '02_transactions'
+WHERE batch_date = DATE '2025-06-30' AND job_name = 'NIGHTLY';
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.IF ACTIVITYCOUNT <> 1 THEN .GOTO rejected
+
+CREATE VOLATILE TABLE vt_payment AS
+(
+    SELECT
+        TRYCAST(TRIM(transaction_id) AS BIGINT) AS transaction_id,
+        TRYCAST(TRIM(account_id) AS INTEGER) AS account_id,
+        TRYCAST(TRIM(txn_date) AS DATE) AS txn_date,
+        TRYCAST(OREPLACE(TRIM(amount), ',', '.') AS DECIMAL(18,2)) AS amount,
+        COALESCE(NULLIF(UPPER(TRIM(channel)), ''), 'ONLINE') AS channel,
+        TRYCAST(TRIM(merchant_id) AS INTEGER) AS merchant_id
+    FROM nvb_stg.transaction_feed
+) WITH DATA PRIMARY INDEX (account_id) ON COMMIT PRESERVE ROWS;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+SELECT TOP 1 p.transaction_id
+FROM vt_payment AS p
+LEFT JOIN nvb_edw.dim_account AS a ON p.account_id = a.account_id
+LEFT JOIN nvb_edw.dim_merchant AS m ON p.merchant_id = m.merchant_id
+WHERE p.transaction_id IS NULL OR p.transaction_id <= 0 OR p.amount IS NULL
+   OR p.txn_date IS NULL OR p.txn_date NOT BETWEEN DATE '2024-01-01' AND DATE '2025-06-30'
+   OR a.account_id IS NULL OR m.merchant_id IS NULL
+   OR p.channel NOT IN ('CARD', 'MOBILE', 'BRANCH', 'ONLINE');
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.IF ACTIVITYCOUNT > 0 THEN .GOTO rejected
+SELECT transaction_id FROM vt_payment GROUP BY 1 HAVING COUNT(*) > 1;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.IF ACTIVITYCOUNT > 0 THEN .GOTO rejected
+COLLECT STATISTICS COLUMN (account_id) ON vt_payment;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+BT;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+DELETE FROM nvb_edw.fct_transaction
+WHERE txn_date BETWEEN DATE '2024-01-01' AND DATE '2025-06-30';
+.IF ERRORCODE <> 0 THEN .GOTO rollback_work
+INSERT INTO nvb_edw.fct_transaction
+    (transaction_id, account_id, txn_date, amount, channel, merchant_id)
+SELECT transaction_id, account_id, CAST(txn_date AS DATE FORMAT 'YYYY-MM-DD'),
+       amount, channel, merchant_id
+FROM vt_payment;
+.IF ERRORCODE <> 0 THEN .GOTO rollback_work
+ET;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+COLLECT STATISTICS COLUMN (txn_date, channel) ON nvb_edw.fct_transaction;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.EXPORT REPORT FILE = control_reports/02_transactions.txt
+SELECT COUNT(*) AS payment_count, SUM(amount) AS net_amount,
+       MIN(txn_date) AS first_date, MAX(txn_date) AS last_date
+FROM nvb_edw.fct_transaction;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.EXPORT RESET
+.LOGOFF
+.QUIT 0
+.LABEL rollback_work
+ABORT;
+.GOTO failed
+.LABEL rejected
+.REMARK 'Control failure: retain delivery and request log; do not publish.'
+.LABEL failed
+.EXPORT RESET
+UPDATE nvb_edw.etl_batch_control
+SET status = 'FAILED', last_step_cd = '02_transactions'
+WHERE batch_date = DATE '2025-06-30' AND job_name = 'NIGHTLY';
+.IF ERRORCODE <> 0 THEN .QUIT 99
+.LOGOFF
+.QUIT 12

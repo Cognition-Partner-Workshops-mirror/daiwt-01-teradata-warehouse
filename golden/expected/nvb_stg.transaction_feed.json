@@ -1,0 +1,35 @@
+{
+  "channel_counts": {
+    "BRANCH": 45029,
+    "CARD": 44888,
+    "MOBILE": 45116,
+    "ONLINE": 44967
+  },
+  "dates": {
+    "txn_date": {
+      "max": "2025-06-30",
+      "min": "2024-01-01"
+    }
+  },
+  "distinct": {
+    "account_id": 7900,
+    "merchant_id": 80,
+    "transaction_id": 180000
+  },
+  "input_rows": {
+    "nvb_edw.dim_account": 8000,
+    "nvb_edw.dim_branch": 8,
+    "nvb_edw.dim_calendar": 547,
+    "nvb_edw.dim_card": 6000,
+    "nvb_edw.dim_merchant": 80,
+    "nvb_edw.dim_product": 4,
+    "nvb_edw.fct_daily_balance": 4376000,
+    "nvb_edw.fct_loan": 1800,
+    "nvb_edw.fct_product_order": 3500,
+    "nvb_stg.customer_feed": 5100,
+    "nvb_stg.transaction_feed": 180000
+  },
+  "rows": 180000,
+  "sums": {},
+  "table": "nvb_stg.transaction_feed"
+}

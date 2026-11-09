@@ -1,0 +1,68 @@
+{
+  "channel_counts": {
+    "BRANCH": 45029,
+    "CARD": 44888,
+    "MOBILE": 45116,
+    "ONLINE": 44967
+  },
+  "clearing_scheme_cd_counts": {
+    "DOMESTIC": 180000
+  },
+  "currency_cd_counts": {
+    "NOK": 180000
+  },
+  "dates": {
+    "effective_date": {
+      "max": "2024-01-01",
+      "min": "2024-01-01"
+    },
+    "expiry_date": {
+      "max": "9999-12-31",
+      "min": "9999-12-31"
+    },
+    "load_ts": {
+      "max": "2025-06-30 23:00:00",
+      "min": "2025-06-30 23:00:00"
+    },
+    "txn_date": {
+      "max": "2025-06-30",
+      "min": "2024-01-01"
+    }
+  },
+  "distinct": {
+    "account_id": 7900,
+    "batch_id": 1,
+    "merchant_id": 80,
+    "transaction_id": 180000
+  },
+  "input_rows": {
+    "nvb_edw.dim_account": 8000,
+    "nvb_edw.dim_branch": 8,
+    "nvb_edw.dim_calendar": 547,
+    "nvb_edw.dim_card": 6000,
+    "nvb_edw.dim_merchant": 80,
+    "nvb_edw.dim_product": 4,
+    "nvb_edw.fct_daily_balance": 4376000,
+    "nvb_edw.fct_loan": 1800,
+    "nvb_edw.fct_product_order": 3500,
+    "nvb_stg.customer_feed": 5100,
+    "nvb_stg.transaction_feed": 180000
+  },
+  "posting_status_cd_counts": {
+    "POSTED": 180000
+  },
+  "record_status_cd_counts": {
+    "A": 180000
+  },
+  "reversal_ind_counts": {
+    "N": 180000
+  },
+  "rows": 180000,
+  "src_system_cd_counts": {
+    "COREBANK": 180000
+  },
+  "sums": {
+    "amount": 90964750.88
+  },
+  "table": "nvb_edw.fct_transaction"
+}

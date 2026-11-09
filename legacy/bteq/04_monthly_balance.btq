@@ -1,0 +1,64 @@
+.LOGON ${TD_HOST}/${TD_USER},${TD_PASSWORD}
+.IF ERRORCODE <> 0 THEN .QUIT 12
+.SET ERROROUT STDOUT
+.SET WIDTH 254
+.SET TITLEDASHES OFF
+SET SESSION DATEFORM = ANSIDATE;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+SELECT batch_date, status, last_step_cd
+FROM nvb_edw.etl_batch_control
+WHERE batch_date = DATE '2025-06-30' AND job_name = 'NIGHTLY';
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.IF ACTIVITYCOUNT = 0 THEN .GOTO register_batch
+.GOTO batch_ready
+.LABEL register_batch
+INSERT INTO nvb_edw.etl_batch_control
+    (batch_date, job_name, status, row_count)
+VALUES (DATE '2025-06-30', 'NIGHTLY', 'OPEN', 0);
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.LABEL batch_ready
+UPDATE nvb_edw.etl_batch_control
+SET status = 'RUNNING', last_step_cd = '04_monthly_balance'
+WHERE batch_date = DATE '2025-06-30' AND job_name = 'NIGHTLY';
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.IF ACTIVITYCOUNT <> 1 THEN .GOTO rejected
+
+CREATE VOLATILE TABLE vt_month_control AS
+(
+    SELECT b.account_id, TRUNC(b.balance_date, 'MONTH') AS month_start,
+           COUNT(*) AS ledger_days, MAX(b.balance_date) AS latest_date
+    FROM nvb_edw.fct_daily_balance AS b
+    GROUP BY 1, 2
+) WITH DATA PRIMARY INDEX (account_id) ON COMMIT PRESERVE ROWS;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+SELECT TOP 1 account_id, month_start, ledger_days
+FROM vt_month_control
+WHERE latest_date <> ADD_MONTHS(month_start, 1) - 1
+   OR ledger_days <> EXTRACT(DAY FROM latest_date);
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.IF ACTIVITYCOUNT > 0 THEN .GOTO rejected
+EXEC nvb_edw.monthly_balance(DATE '2024-01-01', DATE '2025-06-30');
+.IF ERRORCODE <> 0 THEN .GOTO failed
+SELECT TOP 1 w.account_id FROM vt_month_control AS w
+LEFT JOIN nvb_mart.mart_monthly_balance AS m
+  ON w.account_id = m.account_id AND w.month_start = m.month_start
+WHERE m.account_id IS NULL OR m.closing_balance IS NULL;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.IF ACTIVITYCOUNT > 0 THEN .GOTO rejected
+COLLECT STATISTICS COLUMN (month_start) ON nvb_mart.mart_monthly_balance;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+SELECT month_start, COUNT(*) AS accounts, SUM(closing_balance) AS deposits
+FROM nvb_mart.mart_monthly_balance GROUP BY 1 ORDER BY 1;
+.IF ERRORCODE <> 0 THEN .GOTO failed
+.LOGOFF
+.QUIT 0
+.LABEL rejected
+.REMARK 'Control failure: retain delivery and request log; do not publish.'
+.LABEL failed
+.EXPORT RESET
+UPDATE nvb_edw.etl_batch_control
+SET status = 'FAILED', last_step_cd = '04_monthly_balance'
+WHERE batch_date = DATE '2025-06-30' AND job_name = 'NIGHTLY';
+.IF ERRORCODE <> 0 THEN .QUIT 99
+.LOGOFF
+.QUIT 12

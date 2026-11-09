@@ -1,0 +1,103 @@
+timezone: Europe/Oslo
+business_date: '2025-06-30'
+calendar: every_day
+concurrency: 1
+release_sla: '03:00'
+on_failure: hold_descendants_and_page_owner
+lock_resource: nvb_nightly_exclusive
+retention_days:
+  request_logs: 90
+  control_reports: 400
+jobs:
+  - id: upstream
+    start: '00:30'
+    depends_on: []
+    owner: Core Banking Operations
+    sla: '00:55'
+    restart: Replace all direct upstream tables and raw landing deliveries; verify manifest.
+  - id: 01_customer
+    start: '01:00'
+    depends_on: [upstream]
+    owner: Customer Data Operations
+    sla: '01:10'
+    restart: Rerun customer merge from the retained raw delivery.
+    script: legacy/bteq/01_customer.btq
+    accepted_return_codes: [0]
+  - id: 02_transactions
+    start: '01:10'
+    depends_on: [01_customer]
+    owner: Payments Data Operations
+    sla: '01:25'
+    restart: Rerun full retained payment window; transaction rollback protects the prior load.
+    script: legacy/bteq/02_transactions.btq
+    accepted_return_codes: [0]
+  - id: 03_dormant
+    start: '01:25'
+    depends_on: [02_transactions]
+    owner: Deposit Operations
+    sla: '01:30'
+    restart: Recalculate all active accounts after payments are restored.
+    script: legacy/bteq/03_dormant.btq
+    accepted_return_codes: [0]
+  - id: 04_monthly_balance
+    start: '01:30'
+    depends_on: [03_dormant]
+    owner: Finance Control
+    sla: '01:50'
+    restart: Rebuild all retained month partitions from complete daily ledgers.
+    script: legacy/bteq/04_monthly_balance.btq
+    accepted_return_codes: [0]
+  - id: 05_customer_segment
+    start: '01:50'
+    depends_on: [04_monthly_balance]
+    owner: Customer Insight
+    sla: '02:00'
+    restart: Replace the delivery segment population; verify full customer coverage.
+    script: legacy/bteq/05_customer_segment.btq
+    accepted_return_codes: [0]
+  - id: 06_branch_league
+    start: '02:00'
+    depends_on: [05_customer_segment]
+    owner: Branch Operations
+    sla: '02:10'
+    restart: Rebuild all branch totals after customer and payment checks pass.
+    script: legacy/bteq/06_branch_league.btq
+    accepted_return_codes: [0]
+  - id: 07_product_profitability
+    start: '02:10'
+    depends_on: [06_branch_league]
+    owner: Product Finance
+    sla: '02:20'
+    restart: Replace delivery totals in one transaction; inspect product rates first.
+    script: legacy/bteq/07_product_profitability.btq
+    accepted_return_codes: [0]
+  - id: 08_channel
+    start: '02:20'
+    depends_on: [07_product_profitability]
+    owner: Digital Operations
+    sla: '02:25'
+    restart: Rebuild retained date partitions and compare payment counts and amounts.
+    script: legacy/bteq/08_channel.btq
+    accepted_return_codes: [0]
+  - id: 09_card_category
+    start: '02:25'
+    depends_on: [08_channel]
+    owner: Card Services
+    sla: '02:30'
+    restart: Replace delivery category totals and compare negative card payments.
+    script: legacy/bteq/09_card_category.btq
+    accepted_return_codes: [0]
+  - id: 10_close_batch
+    start: '02:30'
+    depends_on: [09_card_category]
+    owner: Data Operations
+    sla: '02:40'
+    restart: Rerun release controls only after every preceding job passes.
+    script: legacy/bteq/10_close_batch.btq
+    accepted_return_codes: [0]
+  - id: reconcile
+    start: '02:40'
+    depends_on: [10_close_batch]
+    owner: Finance Control
+    sla: '03:00'
+    restart: Withhold consumer publication until control reports have been signed off.
